@@ -1,47 +1,54 @@
 <template>
-    <div v-if="revealed && votes.length" class="mt-8 border-t pt-6">
-      <h2 class="text-lg font-bold mb-4">🧠 Estimation Results</h2>
+    <div v-if="revealed && votes.length" class="mt-10 border-t pt-6">
+      <h2 class="text-lg font-bold mb-4 text-center">🧠 Estimation Summary</h2>
   
-      <div class="mb-2 text-gray-700">
-        <strong>Votes:</strong>
-        <span v-for="(v, i) in votes" :key="i" class="inline-block mx-1 px-2 py-1 border rounded text-sm">
+      <div class="mb-4 flex flex-wrap justify-center gap-2">
+        <span
+          v-for="(v, i) in votes"
+          :key="i"
+          class="px-3 py-1 border rounded text-sm bg-gray-100 text-gray-800"
+        >
           {{ v }}
         </span>
       </div>
   
-      <p class="text-gray-600 text-sm">
-        <span>Average: <strong>{{ average }}</strong></span> |
-        <span>Median: <strong>{{ median }}</strong></span> |
-        <span>Suggested Estimate: <strong>{{ mode }}</strong></span>
-      </p>
+      <div class="text-center text-gray-700 space-y-1 text-sm">
+        <p><strong>Average:</strong> {{ average }}</p>
+        <p><strong>Median:</strong> {{ median }}</p>
+        <p><strong>Suggested Estimate:</strong> {{ mode }}</p>
+      </div>
     </div>
   </template>
   
   <script setup lang="ts">
-  const props = defineProps<{
-    sessionId: string
-  }>()
+  const props = defineProps<{ sessionId: string }>()
   
   const supabase = useSupabaseClient()
   const votes = ref<string[]>([])
   const revealed = ref(false)
   
-  // Fetch votes after revealed
-  onMounted(async () => {
+  const fetchVotes = async () => {
     const { data } = await supabase
       .from('estimates')
       .select('value, revealed')
       .eq('session_id', props.sessionId)
   
-    if (!data?.length) return
-  
-    const validVotes = data.filter(e => e.revealed && !isNaN(parseFloat(e.value)))
+    const validVotes = data?.filter(e => e.revealed && !isNaN(parseFloat(e.value))) || []
     votes.value = validVotes.map(v => v.value)
     revealed.value = validVotes.length > 0
+  }
+  
+  onMounted(fetchVotes)
+  
+  // Update in realtime or when rerendered
+  watchEffect(() => {
+    fetchVotes()
   })
   
-  // Numeric-only helper
-  const numericVotes = computed(() => votes.value.map(v => parseFloat(v)).filter(v => !isNaN(v)))
+  // Helpers
+  const numericVotes = computed(() =>
+    votes.value.map(v => parseFloat(v)).filter(v => !isNaN(v))
+  )
   
   const average = computed(() => {
     if (!numericVotes.value.length) return '-'
@@ -60,11 +67,13 @@
   
   const mode = computed(() => {
     if (!numericVotes.value.length) return '-'
-    const freq: Record<number, number> = {}
-    numericVotes.value.forEach(v => freq[v] = (freq[v] || 0) + 1)
-    const max = Math.max(...Object.values(freq))
-    const mostFrequent = Object.keys(freq).find(key => freq[+key] === max)
-    return mostFrequent
+    const counts: Record<number, number> = {}
+    numericVotes.value.forEach(v => {
+      counts[v] = (counts[v] || 0) + 1
+    })
+    const max = Math.max(...Object.values(counts))
+    const mostFrequent = Object.entries(counts).find(([_, count]) => count === max)
+    return mostFrequent?.[0] ?? '-'
   })
   </script>
   

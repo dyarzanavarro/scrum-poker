@@ -1,53 +1,46 @@
 <template>
-    <div class="mt-6 text-center">
-      <UButton
-        color="primary"
-        @click="revealVotes"
-        :disabled="revealed || loading"
-        :loading="loading"
-      >
-        {{ revealed ? 'Votes Revealed' : 'Reveal Votes' }}
-      </UButton>
-    </div>
-  </template>
-  
-  <script setup lang="ts">
-  const props = defineProps<{
-    sessionId: string
-  }>()
-  
-  const supabase = useSupabaseClient()
-  const loading = ref(false)
-  const revealed = ref(false)
-  
-  const checkIfRevealed = async () => {
-    const { data } = await supabase
-      .from('estimates')
-      .select('revealed')
-      .eq('session_id', props.sessionId)
-      .limit(1)
-  
-    if (data?.length) {
-      revealed.value = data[0].revealed === true
-    }
-  }
-  
-  const revealVotes = async () => {
-    loading.value = true
-    const { error } = await supabase
-      .from('estimates')
-      .update({ revealed: true })
-      .eq('session_id', props.sessionId)
-  
-    loading.value = false
-    if (!error) revealed.value = true
-  }
-  
-  onMounted(checkIfRevealed)
-  
-  supabase
-    .channel(`reveals-${props.sessionId}`)
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'estimates' }, checkIfRevealed)
-    .subscribe()
-  </script>
-  
+  <div class="mt-6 text-center">
+    <button
+      @click="revealVotes"
+      :disabled="revealed || loading"
+      class="px-4 py-2 bg-black text-white rounded hover:bg-gray-800 transition disabled:opacity-50"
+    >
+      {{ revealed ? '✅ Votes Revealed' : 'Reveal Votes' }}
+    </button>
+  </div>
+</template>
+
+<script setup lang="ts">
+const props = defineProps<{ sessionId: string }>()
+const supabase = useSupabaseClient()
+
+const revealed = ref(false)
+const loading = ref(false)
+
+const checkIfRevealed = async () => {
+  const { data } = await supabase
+    .from('estimates')
+    .select('revealed')
+    .eq('session_id', props.sessionId)
+    .limit(1)
+
+  revealed.value = !!data?.[0]?.revealed
+}
+
+const revealVotes = async () => {
+  loading.value = true
+  await supabase
+    .from('estimates')
+    .update({ revealed: true })
+    .eq('session_id', props.sessionId)
+  loading.value = false
+  revealed.value = true
+}
+
+onMounted(checkIfRevealed)
+
+supabase
+  .channel(`reveal-${props.sessionId}`)
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'estimates' }, checkIfRevealed)
+  .subscribe()
+</script>
