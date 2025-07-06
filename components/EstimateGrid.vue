@@ -3,13 +3,13 @@
     <button
       v-for="value in values"
       :key="value"
-      @click="submitVote(value)"
       :class="[
-        'text-xl font-semibold py-6 rounded-lg border shadow transition',
+        'transition-all duration-150 transform text-xl py-6 border rounded',
         selected === value
-          ? 'bg-black text-white border-black'
-          : 'bg-white text-gray-700 hover:bg-gray-100 border-gray-300'
+          ? 'scale-105 bg-black text-white shadow-lg'
+          : 'hover:scale-105 bg-white hover:bg-gray-100'
       ]"
+      @click="submitVote(value)"
     >
       {{ value }}
     </button>
@@ -19,6 +19,7 @@
 <script setup lang="ts">
 const props = defineProps<{
   sessionId: string
+  roundId: string
   participantId: string
 }>()
 
@@ -27,14 +28,12 @@ const selected = ref<string | null>(null)
 
 const values = ['0', '0.5', '1', '2', '3', '5', '8', '13', '21', '?', '☕']
 
-// Load previous vote if exists
 onMounted(async () => {
-  if (!props.participantId) return
-
   const { data } = await supabase
     .from('estimates')
     .select('value')
     .eq('session_id', props.sessionId)
+    .eq('round_id', props.roundId)
     .eq('participant_id', props.participantId)
     .single()
 
@@ -42,8 +41,6 @@ onMounted(async () => {
 })
 
 const submitVote = async (value: string) => {
-  if (!props.participantId) return
-
   selected.value = value
 
   const { error } = await supabase
@@ -51,10 +48,12 @@ const submitVote = async (value: string) => {
     .upsert(
       {
         session_id: props.sessionId,
+        round_id: props.roundId,
         participant_id: props.participantId,
-        value
+        value,
+        revealed: false
       },
-      { onConflict: ['session_id', 'participant_id'] }
+      { onConflict: ['session_id', 'round_id', 'participant_id'] }
     )
 
   if (error) {

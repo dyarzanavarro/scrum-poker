@@ -1,5 +1,7 @@
 content: [
+    './components/**/*.{vue,js,ts}',
+    './pages/**/*.{vue,js,ts}',
+    './layouts/**/*.{vue,js,ts}',
     './app.vue',
-    './components/**/*.{vue,js}',
-    './pages/**/*.{vue,js}',
+    './assets/css/**/*.{css,scss}',
 ]

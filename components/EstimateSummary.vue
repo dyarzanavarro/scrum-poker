@@ -1,52 +1,81 @@
 <template>
-  <div v-if="revealed && votes.length" class="mt-8 border-t pt-6">
-    <h2 class="text-lg font-bold mb-4">🧠 Estimation Results</h2>
+  <div class="relative">
+    <!-- Estimation Summary -->
+    <div v-if="revealed && votes.length" class="mt-8 border-t pt-6">
+      <h2 class="text-lg font-bold mb-4">🧠 Estimation Results</h2>
 
-    <div class="mb-2 text-gray-700">
-      <strong>Votes:</strong>
-      <span v-for="(v, i) in votes" :key="i" class="inline-block mx-1 px-2 py-1 border rounded text-sm">
-        {{ v }}
-      </span>
+      <div class="mb-2 text-gray-700">
+        <strong>Votes:</strong>
+        <span
+          v-for="(v, i) in votes"
+          :key="i"
+          class="inline-block mx-1 px-2 py-1 border rounded text-sm opacity-0 animate-fade-in"
+          :style="{ animationDelay: `${i * 0.1}s` }"
+        >
+          {{ v }}
+        </span>
+      </div>
+
+      <p class="text-gray-600 text-sm">
+        <span>Average: <strong>{{ average }}</strong></span> |
+        <span>Median: <strong>{{ median }}</strong></span> |
+        <span>Suggested Estimate: <strong>{{ mode }}</strong></span>
+      </p>
     </div>
-
-    <p class="text-gray-600 text-sm">
-      <span>Average: <strong>{{ average }}</strong></span> |
-      <span>Median: <strong>{{ median }}</strong></span> |
-      <span>Suggested Estimate: <strong>{{ mode }}</strong></span>
-    </p>
   </div>
 </template>
 
 <script setup lang="ts">
-const props = defineProps<{ sessionId: string }>()
-const supabase = useSupabaseClient()
+const props = defineProps<{
+  sessionId: string
+  roundId: string
+}>()
 
+const supabase = useSupabaseClient()
 const votes = ref<string[]>([])
 const revealed = ref(false)
 
-const fetchVotes = async () => {
+// Load once, and on round changes
+onMounted(fetchVotes)
+
+supabase
+  .channel(`rounds-${props.roundId}`)
+  .on('postgres_changes', {
+    event: '*',
+    schema: 'public',
+    table: 'rounds',
+    filter: `id=eq.${props.roundId}`
+  }, fetchVotes)
+  .subscribe()
+
+async function fetchVotes() {
+  const roundRes = await supabase
+    .from('rounds')
+    .select('revealed')
+    .eq('id', props.roundId)
+    .single()
+
+  revealed.value = !!roundRes.data?.revealed
+
+  if (!revealed.value) {
+    votes.value = []
+    return
+  }
+
   const { data } = await supabase
     .from('estimates')
-    .select('value, revealed')
+    .select('value')
     .eq('session_id', props.sessionId)
+    .eq('round_id', props.roundId)
+    .eq('revealed', true)
 
-  if (!data) return
-
-  const validVotes = data.filter(e => e.revealed && !isNaN(parseFloat(e.value)))
+  const validVotes = data?.filter(e => !isNaN(parseFloat(e.value))) || []
   votes.value = validVotes.map(v => v.value)
-  revealed.value = validVotes.length > 0
 }
 
-onMounted(() => {
-  fetchVotes()
-
-  supabase
-    .channel(`summary-${props.sessionId}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'estimates' }, fetchVotes)
-    .subscribe()
-})
-
-const numericVotes = computed(() => votes.value.map(v => parseFloat(v)).filter(v => !isNaN(v)))
+const numericVotes = computed(() =>
+  votes.value.map(v => parseFloat(v)).filter(v => !isNaN(v))
+)
 
 const average = computed(() => {
   if (!numericVotes.value.length) return '-'
@@ -65,9 +94,17 @@ const median = computed(() => {
 
 const mode = computed(() => {
   if (!numericVotes.value.length) return '-'
+
   const freq: Record<number, number> = {}
-  numericVotes.value.forEach(v => freq[v] = (freq[v] || 0) + 1)
-  const max = Math.max(...Object.values(freq))
-  return Object.keys(freq).find(key => freq[+key] === max)
+  numericVotes.value.forEach(v => {
+    freq[v] = (freq[v] || 0) + 1
+  })
+
+  const maxFreq = Math.max(...Object.values(freq))
+  const mostFrequent = Object.keys(freq)
+    .filter(key => freq[+key] === maxFreq)
+    .map(Number)
+
+  return Math.max(...mostFrequent).toString()
 })
 </script>

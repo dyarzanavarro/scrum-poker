@@ -8,4 +8,5 @@ export default defineNuxtConfig({
   supabase: {
     redirect: false,
   },
+  css: ['@/assets/tailwind.css'],
 })

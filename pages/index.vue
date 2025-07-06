@@ -1,6 +1,5 @@
 <template>
   <div>
- 
     <!-- Hero -->
     <section class="py-24 px-6 text-center max-w-2xl mx-auto">
       <h2 class="text-4xl font-bold mb-4 tracking-tight">Agile Estimation, Simplified</h2>
@@ -10,7 +9,7 @@
 
       <div class="flex flex-col sm:flex-row justify-center gap-4 mb-6">
         <button
-          @click="createSession"
+          @click="createSessionWithRound"
           :disabled="loading"
           class="bg-black text-white font-semibold px-6 py-3 rounded-md hover:bg-gray-800 transition"
         >
@@ -34,26 +33,53 @@
 const supabase = useSupabaseClient()
 const router = useRouter()
 
-const sessionName = ref('')
 const loading = ref(false)
 const joinCode = ref('')
 
-const createSession = async () => {
+const createSessionWithRound = async () => {
   loading.value = true
-  const { data, error } = await supabase
+
+  // 1. Create session
+  const { data: session, error: sessionError } = await supabase
     .from('sessions')
-    .insert([{ name: sessionName.value || null }])
+    .insert([{ name: null }])
     .select()
     .single()
 
-  loading.value = false
-
-  if (error || !data) {
-    console.error('Failed to create session', error)
+  if (sessionError || !session) {
+    console.error('❌ Failed to create session', sessionError)
+    loading.value = false
     return
   }
 
-  router.push(`/session/${data.id}`)
+  // 2. Create first round
+  const { error: roundError } = await supabase.from('rounds').insert([
+    { session_id: session.id, title: 'Round 1' }
+  ])
+  if (roundError) {
+    console.error('⚠️ Failed to create round', roundError)
+  }
+
+  // 3. Insert host participant
+  const { data: participant, error: participantError } = await supabase
+    .from('participants')
+    .insert([{ session_id: session.id, username: 'Host', is_host: true }])
+    .select()
+    .single()
+
+  if (participantError || !participant) {
+    console.error('⚠️ Failed to create host participant', participantError)
+  } else {
+    // 4. Save to localStorage
+    localStorage.setItem(
+      `scrum_poker_participant_${session.id}`,
+      JSON.stringify({ id: participant.id, name: 'Host', is_host: true })
+    )
+  }
+
+  // 5. Redirect
+  router.push(`/session/${session.id}`)
+  loading.value = false
 }
 
 const joinByCode = () => {
