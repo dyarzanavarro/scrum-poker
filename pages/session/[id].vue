@@ -35,12 +35,6 @@
         :key="refreshKey"
       />
 
-      <!-- Host-only controls -->
-      <RevealButton
-        v-if="isHost"
-        :session-id="session.id"
-        :round-id="currentRound.id"
-      />
       <RoundControls
   v-if="isHost"
   :session-id="session.id"
@@ -48,6 +42,7 @@
   :participant-id="participantId"
   :is-host="isHost"
   @round-created="handleRoundCreated"
+  @round-revealed="handleRoundRevealed"
 />
 
       <!-- Emoji Fun -->
@@ -107,6 +102,16 @@ onMounted(async () => {
 
   currentRound.value = roundRes.data
 
+  // Subscribe to new rounds
+  supabase.channel('realtime-rounds')
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'rounds',
+      filter: `session_id=eq.${sessionId}`
+    }, handleRoundCreated)
+    .subscribe()
+
   // Check for existing participant
   const existing = localStorage.getItem(SESSION_KEY)
   if (existing) {
@@ -122,7 +127,6 @@ onMounted(async () => {
 const joinSession = async () => {
   if (!username.value.trim()) return
 
-  // Check if there are any participants already
   const { count } = await supabase
     .from('participants')
     .select('id', { count: 'exact', head: true })
@@ -149,6 +153,7 @@ const joinSession = async () => {
     console.error('❌ Failed to join session', error)
   }
 }
+
 const copySessionLink = async () => {
   if (!session.value?.id) return
   const link = `${window.location.origin}/session/${session.value.id}`
@@ -161,6 +166,19 @@ const copySessionLink = async () => {
 }
 
 const handleRoundCreated = async () => {
+  const roundRes = await supabase
+    .from('rounds')
+    .select('*')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  currentRound.value = roundRes.data
+  refreshKey.value++
+}
+
+const handleRoundRevealed = async () => {
   const roundRes = await supabase
     .from('rounds')
     .select('*')

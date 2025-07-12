@@ -1,27 +1,12 @@
 <template>
-  <div class="relative">
-    <!-- Estimation Summary -->
-    <div v-if="revealed && votes.length" class="mt-8 border-t pt-6">
-      <h2 class="text-lg font-bold mb-4">🧠 Estimation Results</h2>
-
-      <div class="mb-2 text-gray-700">
-        <strong>Votes:</strong>
-        <span
-          v-for="(v, i) in votes"
-          :key="i"
-          class="inline-block mx-1 px-2 py-1 border rounded text-sm opacity-0 animate-fade-in"
-          :style="{ animationDelay: `${i * 0.1}s` }"
-        >
-          {{ v }}
-        </span>
-      </div>
-
-      <p class="text-gray-600 text-sm">
-        <span>Average: <strong>{{ average }}</strong></span> |
-        <span>Median: <strong>{{ median }}</strong></span> |
-        <span>Suggested Estimate: <strong>{{ mode }}</strong></span>
-      </p>
-    </div>
+  <div v-if="estimates.length && revealed" class="mt-6 border-t pt-4">
+    <h3 class="font-semibold mb-2">Estimates Summary</h3>
+    <ul class="mb-2">
+      <li v-for="estimate in estimates" :key="estimate.id" class="text-sm text-gray-700">
+        {{ estimate.username }}: {{ estimate.value }}
+      </li>
+    </ul>
+    <p class="text-sm text-gray-500">Suggested value: <span class="font-semibold">{{ suggested }}</span></p>
   </div>
 </template>
 
@@ -32,79 +17,61 @@ const props = defineProps<{
 }>()
 
 const supabase = useSupabaseClient()
-const votes = ref<string[]>([])
+const estimates = ref<any[]>([])
 const revealed = ref(false)
+const suggested = ref<string>('')
 
-// Load once, and on round changes
-onMounted(fetchVotes)
+const calculateSuggested = (values: string[]) => {
+  // Only consider numeric values
+  const numbers = values.map(v => parseFloat(v)).filter(n => !isNaN(n))
+  if (!numbers.length) return ''
 
-supabase
-  .channel(`rounds-${props.roundId}`)
-  .on('postgres_changes', {
-    event: '*',
-    schema: 'public',
-    table: 'rounds',
-    filter: `id=eq.${props.roundId}`
-  }, fetchVotes)
-  .subscribe()
+  // Calculate mode
+  const freqMap: Record<number, number> = {}
+  numbers.forEach(n => { freqMap[n] = (freqMap[n] || 0) + 1 })
+  const maxFreq = Math.max(...Object.values(freqMap))
+  const modes = Object.entries(freqMap).filter(([, freq]) => freq === maxFreq).map(([val]) => Number(val))
+  
+  // Fallback to average if too many modes
+  if (modes.length > 3) {
+    const avg = numbers.reduce((a, b) => a + b, 0) / numbers.length
+    return avg.toFixed(1)
+  }
 
-async function fetchVotes() {
-  const roundRes = await supabase
+  return modes.sort((a, b) => a - b)[0].toString()
+}
+
+const fetchEstimates = async () => {
+  const { data: roundData } = await supabase
     .from('rounds')
     .select('revealed')
     .eq('id', props.roundId)
     .single()
 
-  revealed.value = !!roundRes.data?.revealed
+  revealed.value = roundData?.revealed ?? false
+  if (!revealed.value) return
 
-  if (!revealed.value) {
-    votes.value = []
-    return
-  }
-
-  const { data } = await supabase
+  const { data: estimatesData } = await supabase
     .from('estimates')
-    .select('value')
-    .eq('session_id', props.sessionId)
+    .select('value, participant_id, participants(username)')
     .eq('round_id', props.roundId)
-    .eq('revealed', true)
 
-  const validVotes = data?.filter(e => !isNaN(parseFloat(e.value))) || []
-  votes.value = validVotes.map(v => v.value)
+  estimates.value = estimatesData?.map(e => ({
+    id: e.participant_id,
+    value: e.value,
+    username: e.participants?.username ?? 'Anonymous'
+  })) ?? []
+
+  suggested.value = calculateSuggested(estimates.value.map(e => e.value))
 }
 
-const numericVotes = computed(() =>
-  votes.value.map(v => parseFloat(v)).filter(v => !isNaN(v))
-)
-
-const average = computed(() => {
-  if (!numericVotes.value.length) return '-'
-  const sum = numericVotes.value.reduce((a, b) => a + b, 0)
-  return (sum / numericVotes.value.length).toFixed(1)
-})
-
-const median = computed(() => {
-  if (!numericVotes.value.length) return '-'
-  const sorted = [...numericVotes.value].sort((a, b) => a - b)
-  const mid = Math.floor(sorted.length / 2)
-  return sorted.length % 2 === 0
-    ? ((sorted[mid - 1] + sorted[mid]) / 2).toFixed(1)
-    : sorted[mid].toString()
-})
-
-const mode = computed(() => {
-  if (!numericVotes.value.length) return '-'
-
-  const freq: Record<number, number> = {}
-  numericVotes.value.forEach(v => {
-    freq[v] = (freq[v] || 0) + 1
-  })
-
-  const maxFreq = Math.max(...Object.values(freq))
-  const mostFrequent = Object.keys(freq)
-    .filter(key => freq[+key] === maxFreq)
-    .map(Number)
-
-  return Math.max(...mostFrequent).toString()
-})
+onMounted(fetchEstimates)
+watch(() => props.roundId, fetchEstimates)
 </script>
+
+<style scoped>
+ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+}
+</style>

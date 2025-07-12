@@ -1,5 +1,5 @@
 <template>
-  <div v-if="isHost" class="mt-6 flex flex-wrap gap-4">
+  <div class="mt-6 flex flex-wrap gap-4">
     <button
       class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
       @click="revealVotes"
@@ -32,19 +32,21 @@ const props = defineProps<{
   isHost: boolean
 }>()
 
-const emit = defineEmits(['round-created'])
-
+const emit = defineEmits(['round-created', 'round-revealed'])
 const supabase = useSupabaseClient()
 const round = ref<any>(null)
 
-onMounted(async () => {
+const fetchRound = async () => {
   const { data } = await supabase
     .from('rounds')
     .select('*')
     .eq('id', props.roundId)
     .single()
   round.value = data
-})
+}
+
+onMounted(fetchRound)
+watch(() => props.roundId, fetchRound)
 
 const revealVotes = async () => {
   await supabase
@@ -53,6 +55,7 @@ const revealVotes = async () => {
     .eq('id', props.roundId)
 
   round.value.revealed = true
+  emit('round-revealed')
 }
 
 const nextRound = async () => {
@@ -75,6 +78,6 @@ const nextRound = async () => {
 const restartRound = async () => {
   await supabase.from('estimates').delete().eq('round_id', props.roundId)
   await supabase.from('rounds').update({ revealed: false }).eq('id', props.roundId)
-  round.value.revealed = false
+  await fetchRound()
 }
 </script>
