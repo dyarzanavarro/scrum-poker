@@ -19,14 +19,43 @@
         <h2 class="font-semibold mb-2">Participants</h2>
         <ParticipantsList :session-id="session.id" :round-id="currentRound.id" :key="refreshKey" />
       </div>
+<!-- Current Round Title -->
+<div class="mb-4">
+  <label class="text-sm text-gray-500 block mb-1">Current Story</label>
 
-      <!-- Estimates -->
-      <EstimateGrid
-        :session-id="session.id"
-        :round-id="currentRound.id"
-        :participant-id="participantId ?? ''"
-        :key="refreshKey"
-      />
+  <div v-if="isHost" class="flex gap-2 items-center">
+    <input
+      v-model="roundTitle"
+      class="border px-2 py-1 rounded text-sm w-64"
+      :disabled="!isHost"
+    />
+    <button
+      v-if="isHost"
+      @click="() => { console.log('💾 Saving title...'); saveRoundTitle(); }"
+            class="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+    >
+      Save
+    </button>
+  </div>
+
+  <div class="text-sm text-gray-800 italic">
+  Estimating:
+  <template v-if="jiraLink">
+    <a :href="jiraLink" target="_blank" class="text-blue-600 hover:underline">
+      {{ currentRound?.title }}
+    </a>
+  </template>
+  <template v-else>
+    {{ currentRound?.title || 'Untitled Round' }}
+  </template>
+</div>
+</div>
+<EstimateGrid
+  :session-id="session.id"
+  :round-id="currentRound.id"
+  :participant-id="participantId ?? ''"
+  :key="refreshKey"
+/>
 
       <!-- Estimation Results (everyone sees) -->
       <EstimateSummary
@@ -78,6 +107,7 @@ const username = ref('')
 const isHost = ref(false)
 const showJoinModal = ref(false)
 const refreshKey = ref(0)
+const roundTitle = ref('')
 
 const SESSION_KEY = `scrum_poker_participant_${sessionId}`
 
@@ -92,15 +122,7 @@ onMounted(async () => {
   session.value = sessionData
 
   // Load latest round
-  const roundRes = await supabase
-    .from('rounds')
-    .select('*')
-    .eq('session_id', sessionId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
-
-  currentRound.value = roundRes.data
+  await fetchLatestRound()
 
   // Subscribe to new rounds
   supabase.channel('realtime-rounds')
@@ -124,6 +146,44 @@ onMounted(async () => {
   }
 })
 
+const fetchLatestRound = async () => {
+  const roundRes = await supabase
+    .from('rounds')
+    .select('*')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  currentRound.value = roundRes.data
+  roundTitle.value = roundRes.data?.title || ''
+}
+
+const handleRoundCreated = async () => {
+  await fetchLatestRound()
+  refreshKey.value++
+}
+
+const handleRoundRevealed = async () => {
+  await fetchLatestRound()
+  refreshKey.value++
+}
+
+const saveRoundTitle = async () => {
+  if (!roundTitle.value.trim() || !currentRound.value?.id) return
+
+  const { error } = await supabase
+    .from('rounds')
+    .update({ title: roundTitle.value })
+    .eq('id', currentRound.value.id)
+
+  if (error) {
+    console.error('❌ Failed to save round title', error)
+  } else {
+    console.log('✅ Round title saved')
+    await fetchLatestRound()
+  }
+}
 const joinSession = async () => {
   if (!username.value.trim()) return
 
@@ -165,29 +225,10 @@ const copySessionLink = async () => {
   }
 }
 
-const handleRoundCreated = async () => {
-  const roundRes = await supabase
-    .from('rounds')
-    .select('*')
-    .eq('session_id', sessionId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
-
-  currentRound.value = roundRes.data
-  refreshKey.value++
-}
-
-const handleRoundRevealed = async () => {
-  const roundRes = await supabase
-    .from('rounds')
-    .select('*')
-    .eq('session_id', sessionId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
-
-  currentRound.value = roundRes.data
-  refreshKey.value++
-}
+const jiraLink = computed(() => {
+  const match = currentRound.value?.title?.match(/^([A-Z]+-\d+)/)
+  if (!match) return null
+  const ticket = match[1]
+  return `https://flankerbrands.atlassian.net/browse/${ticket}`
+})
 </script>

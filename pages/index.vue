@@ -1,8 +1,11 @@
 <template>
-  <div>
+  <div class="min-h-screen bg-gradient-to-br from-gray-50 to-white flex flex-col justify-between">
     <!-- Hero -->
     <section class="py-24 px-6 text-center max-w-2xl mx-auto">
-      <h2 class="text-4xl font-bold mb-4 tracking-tight">Agile Estimation, Simplified</h2>
+
+      <h1 class="text-5xl font-extrabold mb-4 tracking-tight leading-tight">
+        Agile Estimation <span class="underline decoration-wavy">Simplified</span>
+      </h1>
       <p class="text-gray-600 text-lg mb-8">
         Create a real-time SCRUM Poker session. No signup needed — just fast, collaborative planning.
       </p>
@@ -11,7 +14,7 @@
         <button
           @click="createSessionWithRound"
           :disabled="loading"
-          class="bg-black text-white font-semibold px-6 py-3 rounded-md hover:bg-gray-800 transition"
+          class="bg-black text-white font-semibold px-6 py-3 rounded-md hover:bg-gray-800 hover:scale-105 transition"
         >
           🚀 Start New Session
         </button>
@@ -24,8 +27,22 @@
         />
       </div>
 
-      <p class="text-xs text-gray-400">QR join support coming soon!</p>
     </section>
+
+    <!-- How It Works -->
+    <section class="text-center px-6 pb-16">
+      <h3 class="text-xl font-semibold mb-4">How it works</h3>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto text-sm text-gray-600">
+        <div>✅ Start a session — no signup needed</div>
+        <div>👥 Invite teammates with a link or QR code</div>
+        <div>📊 Vote, reveal, and estimate in real-time</div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-gray-400 mb-6">
+      Built with ❤️ by DYN. <a href="https://github.com/dyarzanavarro" class="underline">View on GitHub</a>
+    </footer>
   </div>
 </template>
 
@@ -39,7 +56,6 @@ const joinCode = ref('')
 const createSessionWithRound = async () => {
   loading.value = true
 
-  // 1. Create session
   const { data: session, error: sessionError } = await supabase
     .from('sessions')
     .insert([{ name: null }])
@@ -52,7 +68,6 @@ const createSessionWithRound = async () => {
     return
   }
 
-  // 2. Create first round
   const { error: roundError } = await supabase.from('rounds').insert([
     { session_id: session.id, title: 'Round 1' }
   ])
@@ -60,7 +75,6 @@ const createSessionWithRound = async () => {
     console.error('⚠️ Failed to create round', roundError)
   }
 
-  // 3. Insert host participant
   const { data: participant, error: participantError } = await supabase
     .from('participants')
     .insert([{ session_id: session.id, username: 'Host', is_host: true }])
@@ -70,14 +84,12 @@ const createSessionWithRound = async () => {
   if (participantError || !participant) {
     console.error('⚠️ Failed to create host participant', participantError)
   } else {
-    // 4. Save to localStorage
     localStorage.setItem(
       `scrum_poker_participant_${session.id}`,
       JSON.stringify({ id: participant.id, name: 'Host', is_host: true })
     )
   }
 
-  // 5. Redirect
   router.push(`/session/${session.id}`)
   loading.value = false
 }
@@ -85,5 +97,9 @@ const createSessionWithRound = async () => {
 const joinByCode = () => {
   if (!joinCode.value.trim()) return
   router.push(`/session/${joinCode.value.trim()}`)
+}
+
+const joinDemo = () => {
+  router.push(`/session/demo`)
 }
 </script>

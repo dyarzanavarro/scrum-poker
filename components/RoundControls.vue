@@ -24,6 +24,7 @@
   </div>
 </template>
 
+
 <script setup lang="ts">
 const props = defineProps<{
   sessionId: string
@@ -80,4 +81,6 @@ const restartRound = async () => {
   await supabase.from('rounds').update({ revealed: false }).eq('id', props.roundId)
   await fetchRound()
 }
+
+
 </script>
