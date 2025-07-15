@@ -61,6 +61,7 @@
       <EstimateSummary
         :session-id="session.id"
         :round-id="currentRound.id"
+        participant-id="participantId ?? ''"
         :key="refreshKey"
       />
 

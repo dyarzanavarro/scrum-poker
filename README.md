@@ -1,75 +1,42 @@
-# Nuxt Minimal Starter
+# 🦊 Kitsune Planning Poker
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+A real-time, collaborative SCRUM Poker web app built for agile teams who want fast and delightful estimation sessions — without the login friction.
 
-## Setup
+## ✨ Features
 
-Make sure to install dependencies:
+- ✅ Real-time sessions with Supabase
+- 🃏 Estimation grid with customizable rounds
+- 🔐 No auth required — just join with a name
+- 🧠 Jira ticket recognition with smart linking
+- 📊 Instant summary of team estimates
+- 🔄 Multiple rounds per session
+- 🎉 Fun additions like the ADHD corner
+
+## 🛠️ Tech Stack
+
+- **Frontend**: Nuxt 3, TypeScript, Tailwind CSS  
+- **Backend / Realtime DB**: Supabase (Postgres + Realtime)  
+- **State**: `ref`-based Vue Composition API  
+- **Styling**: Utility-first design with Tailwind  
+- **Deployment**: Netlify (or Vercel compatible)  
+
+## 🚀 Getting Started
 
 ```bash
-# npm
+# Install dependencies
 npm install
 
-# pnpm
-pnpm install
+# Add your Supabase project URL and anon key to .env
+SUPABASE_URL=...
+SUPABASE_ANON_KEY=...
 
-# yarn
-yarn install
-
-# bun
-bun install
-```
-
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
-```bash
-# npm
+# Start the dev server
 npm run dev
+## 🧪 Development Notes
 
-# pnpm
-pnpm dev
+- Local participant identity is stored in localStorage per session. 
+- Realtime updates are powered by Supabase's channel() subscriptions.
+- The host has elevated controls like revealing votes and starting new rounds.
 
-# yarn
-yarn dev
 
-# bun
-bun run dev
-```
-
-## Production
-
-Build the application for production:
-
-```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+Enjoy lightning-fast agile planning with Kitsune! 🦊✨
