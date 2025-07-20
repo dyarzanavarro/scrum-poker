@@ -22,17 +22,14 @@ const revealed = ref(false)
 const suggested = ref<string>('')
 
 const calculateSuggested = (values: string[]) => {
-  // Only consider numeric values
   const numbers = values.map(v => parseFloat(v)).filter(n => !isNaN(n))
   if (!numbers.length) return ''
 
-  // Calculate mode
   const freqMap: Record<number, number> = {}
   numbers.forEach(n => { freqMap[n] = (freqMap[n] || 0) + 1 })
   const maxFreq = Math.max(...Object.values(freqMap))
   const modes = Object.entries(freqMap).filter(([, freq]) => freq === maxFreq).map(([val]) => Number(val))
-  
-  // Fallback to average if too many modes
+
   if (modes.length > 3) {
     const avg = numbers.reduce((a, b) => a + b, 0) / numbers.length
     return avg.toFixed(1)
@@ -67,6 +64,12 @@ const fetchEstimates = async () => {
 
 onMounted(fetchEstimates)
 watch(() => props.roundId, fetchEstimates)
+
+supabase
+  .channel(`estimates-summary-${props.roundId}`)
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'estimates', filter: `round_id=eq.${props.roundId}` }, fetchEstimates)
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'rounds', filter: `id=eq.${props.roundId}` }, fetchEstimates)
+  .subscribe()
 </script>
 
 <style scoped>

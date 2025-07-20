@@ -35,7 +35,7 @@ onMounted(async () => {
     .eq('session_id', props.sessionId)
     .eq('round_id', props.roundId)
     .eq('participant_id', props.participantId)
-    .single()
+    .maybeSingle()
 
   if (data?.value) selected.value = data.value
 })

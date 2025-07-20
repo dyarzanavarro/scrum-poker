@@ -154,7 +154,7 @@ const fetchLatestRound = async () => {
     .eq('session_id', sessionId)
     .order('created_at', { ascending: false })
     .limit(1)
-    .single()
+    .maybeSingle()
 
   currentRound.value = roundRes.data
   roundTitle.value = roundRes.data?.title || ''
