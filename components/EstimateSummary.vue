@@ -2,11 +2,11 @@
   <div v-if="estimates.length && revealed" class="mt-6 border-t pt-4">
     <h3 class="font-semibold mb-2">Estimates Summary</h3>
     <ul class="mb-2">
-      <li v-for="estimate in estimates" :key="estimate.id" class="text-sm text-gray-700">
+      <li v-for="estimate in estimates" :key="estimate.id" class="text-sm text-gray-700 dark:text-gray-300">
         {{ estimate.username }}: {{ estimate.value }}
       </li>
     </ul>
-    <p class="text-sm text-gray-500">Suggested value: <span class="font-semibold">{{ suggested }}</span></p>
+    <p class="text-sm text-gray-500 dark:text-gray-400">Suggested value: <span class="font-semibold">{{ suggested }}</span></p>
   </div>
 </template>
 

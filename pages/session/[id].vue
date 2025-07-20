@@ -1,94 +1,101 @@
 <template>
-  <div class="p-4 max-w-3xl mx-auto">
+  <div class="min-h-screen p-4 max-w-3xl mx-auto bg-white text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+
     <h1 class="text-xl font-bold mb-4">SCRUM Poker Session</h1>
 
     <div v-if="session && currentRound">
+      <!-- Session Info -->
       <div class="flex items-center justify-between mb-4 gap-4">
         <div>
-          <p class="text-sm text-gray-500">Session ID:</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Session ID:</p>
           <div class="flex items-center gap-2">
             <p class="font-mono text-sm cursor-pointer" @click="copySessionLink">{{ session.id }}</p>
-            <button @click="copySessionLink" class="cursor-pointer text-xs text-blue-600 hover:underline">📋 Copy</button>
+            <button @click="copySessionLink" class="text-xs text-blue-600 hover:underline">📋 Copy</button>
           </div>
         </div>
         <QRCodeInline class="cursor-pointer" @click="copySessionLink" :session-id="session.id" />
       </div>
 
       <!-- Participants -->
-      <div class="border p-4 rounded mb-4">
+      <div class="border border-gray-200 dark:border-gray-700 p-4 rounded mb-4">
         <h2 class="font-semibold mb-2">Participants</h2>
         <ParticipantsList :session-id="session.id" :round-id="currentRound.id" :key="refreshKey" />
       </div>
-<!-- Current Round Title -->
-<div class="mb-4">
-  <label class="text-sm text-gray-500 block mb-1">Current Story</label>
 
-  <div v-if="isHost" class="flex gap-2 items-center">
-    <input
-      v-model="roundTitle"
-      class="border px-2 py-1 rounded text-sm w-64"
-      :disabled="!isHost"
-    />
-    <button
-      v-if="isHost"
-      @click="() => { console.log('💾 Saving title...'); saveRoundTitle(); }"
+      <!-- Current Round Title -->
+      <div class="mb-4">
+        <label class="text-sm text-gray-500 dark:text-gray-400 block mb-1">Current Story</label>
+
+        <div v-if="isHost" class="flex gap-2 items-center">
+          <input
+            v-model="roundTitle"
+            class="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 px-2 py-1 rounded w-64"
+          />
+          <button
+            @click="saveRoundTitle"
             class="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700"
-    >
-      Save
-    </button>
-  </div>
+          >
+            💾 Save
+          </button>
+        </div>
 
-  <div class="text-sm text-gray-800 italic">
-  Estimating:
-  <template v-if="jiraLink">
-    <a :href="jiraLink" target="_blank" class="text-blue-600 hover:underline">
-      {{ currentRound?.title }}
-    </a>
-  </template>
-  <template v-else>
-    {{ currentRound?.title || 'Untitled Round' }}
-  </template>
-</div>
-</div>
-<EstimateGrid
-  :session-id="session.id"
-  :round-id="currentRound.id"
-  :participant-id="participantId ?? ''"
-  :key="refreshKey"
-/>
+        <div class="text-sm italic text-gray-800 dark:text-gray-300 mt-2">
+          Estimating:
+          <template v-if="jiraLink">
+            <a :href="jiraLink" target="_blank" class="text-blue-600 hover:underline">
+              {{ currentRound?.title }}
+            </a>
+          </template>
+          <template v-else>
+            {{ currentRound?.title || 'Untitled Round' }}
+          </template>
+        </div>
+      </div>
 
-      <!-- Estimation Results (everyone sees) -->
-      <EstimateSummary
+      <!-- Voting Grid -->
+      <EstimateGrid
         :session-id="session.id"
         :round-id="currentRound.id"
-        participant-id="participantId ?? ''"
+        :participant-id="participantId ?? ''"
         :key="refreshKey"
       />
 
-      <RoundControls
-  v-if="isHost"
-  :session-id="session.id"
-  :round-id="currentRound.id"
-  :participant-id="participantId"
-  :is-host="isHost"
-  @round-created="handleRoundCreated"
-  @round-revealed="handleRoundRevealed"
-/>
+      <!-- Estimation Results -->
+      <EstimateSummary
+        :session-id="session.id"
+        :round-id="currentRound.id"
+        :participant-id="participantId ?? ''"
+        :key="refreshKey"
+      />
 
-      <!-- Emoji Fun -->
+      <!-- Host Controls -->
+      <RoundControls
+        v-if="isHost"
+        :session-id="session.id"
+        :round-id="currentRound.id"
+        :participant-id="participantId"
+        :is-host="isHost"
+        @round-created="handleRoundCreated"
+        @round-revealed="handleRoundRevealed"
+      />
+
+      <!-- Emoji Fun Corner -->
       <ADHDCorner />
     </div>
 
-    <!-- Join modal -->
+    <!-- Join Modal -->
     <div v-if="showJoinModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 w-full max-w-sm space-y-4">
+      <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-sm space-y-4">
         <h2 class="text-lg font-bold text-center">Enter your name to join</h2>
         <input
           v-model="username"
           placeholder="Your name…"
-          class="w-full border border-gray-300 px-4 py-2 rounded"
+          class="w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-100 px-4 py-2 rounded"
         />
-        <button @click="joinSession" class="w-full bg-black text-white py-2 rounded hover:bg-gray-800">
+        <button
+          @click="joinSession"
+          class="w-full bg-black text-white py-2 rounded hover:bg-gray-800 dark:bg-gray-600 dark:hover:bg-gray-500"
+        >
           Join Session
         </button>
       </div>

@@ -1,7 +1,7 @@
 <template>
     <div class="fixed bottom-4 right-4 z-50">
-      <div class="bg-white shadow-lg rounded-lg p-3 w-60">
-        <h3 class="text-sm font-semibold mb-2 text-gray-700">🎈 ADHD Corner</h3>
+      <div class="bg-white shadow-lg rounded-lg p-3 w-60 dark:bg-gray-600">
+        <h3 class="text-sm font-semibold mb-2 text-gray-900">🎈 ADHD Corner</h3>
         <div class="flex flex-wrap gap-1 mb-2 text-xl">
           <span
             v-for="e in emojis"

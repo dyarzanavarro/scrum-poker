@@ -1,10 +1,13 @@
 <template>
-    <nav class="flex justify-between items-center px-6 py-4 border-b bg-background/50 backdrop-blur sticky top-0 z-50">
-     
-     <nuxt-link to="/" class="text-xl font-bold">🦊 Kitsune Planning Poker
-    </nuxt-link>
+  <nav
+    class="sticky top-0 z-50 flex justify-between items-center px-6 py-4 border-b 
+           bg-white dark:bg-gray-900 dark:bg-gray-700 dark:border-gray-600 text-black dark:text-white"
+  >
+    <NuxtLink to="/" class="text-xl font-bold hover:opacity-90">
+      🦊 Kitsune Planning Poker
+    </NuxtLink>
+  </nav>
+</template>
 
-
-    </nav>
-  </template>
-<script  lang="ts"></script>
+<script setup lang="ts">
+</script>

@@ -1,15 +1,17 @@
 <template>
-  <div class="grid grid-cols-4 gap-4 mt-6">
+  <div class="grid grid-cols-4 sm:grid-cols-4 gap-4 mt-6">
     <button
       v-for="value in values"
       :key="value"
-      :class="[
-        'transition-all duration-150 transform text-xl py-6 border rounded',
-        selected === value
-          ? 'scale-105 bg-black text-white shadow-lg'
-          : 'hover:scale-105 bg-white hover:bg-gray-100'
-      ]"
       @click="submitVote(value)"
+      :class="[
+        'transition-all duration-150 transform text-xl font-semibold py-6 rounded-md border shadow-sm focus:outline-none',
+        'dark:bg-gray-950 dark:text-gray-200 dark:border-gray-700',
+        'bg-white text-gray-900 border-gray-300 hover:bg-gray-100 dark:hover:bg-gray-900',
+        selected === value
+          ? 'ring-2 ring-offset-2 ring-black dark:ring-white scale-105'
+          : 'hover:scale-105'
+      ]"
     >
       {{ value }}
     </button>
