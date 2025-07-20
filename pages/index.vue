@@ -14,7 +14,7 @@
         <button
           @click="createSessionWithRound"
           :disabled="loading"
-          class="bg-black text-white font-semibold px-6 py-3 rounded-md hover:bg-gray-800 hover:scale-105 transition"
+          class="bg-black text-white font-semibold px-6 py-3 rounded-md cursor-pointer hover:bg-gray-800 hover:scale-105 transition"
         >
           🚀 Start New Session
         </button>
@@ -53,45 +53,71 @@ const router = useRouter()
 const loading = ref(false)
 const joinCode = ref('')
 
+
 const createSessionWithRound = async () => {
   loading.value = true
 
-  const { data: session, error: sessionError } = await supabase
-    .from('sessions')
-    .insert([{ name: null }])
-    .select()
-    .single()
+  try {
+    // 1. Get Turnstile token from widget
+    if (process.env.NODE_ENV === 'production') {
+      const turnstileToken = (window as any).turnstile?.getResponse()
+      if (!turnstileToken) {
+        alert("Please complete the CAPTCHA.")
+        loading.value = false
+        return
+      }
+    }
 
-  if (sessionError || !session) {
-    console.error('❌ Failed to create session', sessionError)
+    // 2. Get client IP
+    const ipRes = await fetch("https://api.ipify.org?format=json")
+    const ipData = await ipRes.json()
+    const ip = ipData?.ip || null
+
+    // 3. Insert session with IP
+    const { data: session, error: sessionError } = await supabase
+      .from("sessions")
+      .insert([{ name: null, ip_address: ip }])
+      .select()
+      .single()
+
+    if (sessionError || !session) {
+      console.error("❌ Failed to create session", sessionError)
+      alert("Failed to create session.")
+      loading.value = false
+      return
+    }
+
+    // 4. Insert first round
+    const { error: roundError } = await supabase.from("rounds").insert([
+      { session_id: session.id, title: "Round 1" }
+    ])
+    if (roundError) {
+      console.error("⚠️ Failed to create round", roundError)
+    }
+
+    // 5. Insert host participant
+    const { data: participant, error: participantError } = await supabase
+      .from("participants")
+      .insert([{ session_id: session.id, username: "Host", is_host: true }])
+      .select()
+      .single()
+
+    if (participantError || !participant) {
+      console.error("⚠️ Failed to create host participant", participantError)
+    } else {
+      localStorage.setItem(
+        `scrum_poker_participant_${session.id}`,
+        JSON.stringify({ id: participant.id, name: "Host", is_host: true })
+      )
+    }
+
+    router.push(`/session/${session.id}`)
+  } catch (err) {
+    console.error("Unexpected error", err)
+    alert("Something went wrong.")
+  } finally {
     loading.value = false
-    return
   }
-
-  const { error: roundError } = await supabase.from('rounds').insert([
-    { session_id: session.id, title: 'Round 1' }
-  ])
-  if (roundError) {
-    console.error('⚠️ Failed to create round', roundError)
-  }
-
-  const { data: participant, error: participantError } = await supabase
-    .from('participants')
-    .insert([{ session_id: session.id, username: 'Host', is_host: true }])
-    .select()
-    .single()
-
-  if (participantError || !participant) {
-    console.error('⚠️ Failed to create host participant', participantError)
-  } else {
-    localStorage.setItem(
-      `scrum_poker_participant_${session.id}`,
-      JSON.stringify({ id: participant.id, name: 'Host', is_host: true })
-    )
-  }
-
-  router.push(`/session/${session.id}`)
-  loading.value = false
 }
 
 const joinByCode = () => {
