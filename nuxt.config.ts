@@ -1,4 +1,3 @@
-// https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-05-15',
   devtools: { enabled: true },
@@ -10,6 +9,20 @@ export default defineNuxtConfig({
     '@nuxt/content',
     '@nuxtjs/turnstile',
   ],
+
+  ssr: true,
+  content: {
+    highlight: {
+      theme: 'github-dark',
+      preload: ['javascript', 'typescript', 'html', 'css'],
+    },
+    documentDriven: true, // enable Nuxt Content to generate routes
+  },
+  nitro: {
+    prerender: {
+      routes: ['/blog', '/blog/distributed-agile-teams'],
+    },
+  },
 
   gtag: {
     id: 'G-248JBX6J6P',

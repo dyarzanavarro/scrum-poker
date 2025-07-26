@@ -6,6 +6,10 @@
     <NuxtLink to="/" class="text-xl font-bold hover:opacity-90">
       🦊 Kitsune Planning Poker
     </NuxtLink>
+
+    <NuxtLink to="/blog" class="text-xl font-bold hover:opacity-90">
+      📝 Blog
+    </NuxtLink>
   </nav>
 </template>
 

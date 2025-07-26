@@ -1,10 +1,5 @@
-import { defineContentConfig, defineCollection } from '@nuxt/content'
+import defineContentConfig from '@nuxt/content'
 
 export default defineContentConfig({
-    collections: {
-        content: defineCollection({
-            type: 'page',
-            source: '**/*.md'
-        })
-    }
+    documentDriven: true, // enable Nuxt Content to generate routes
 })

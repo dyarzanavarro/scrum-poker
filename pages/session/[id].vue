@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen p-4 max-w-3xl mx-auto bg-white text-gray-800 dark:bg-gray-900 dark:text-gray-200">
-
+ <div class="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+    <div class="p-4 max-w-3xl mx-auto">
     <h1 class="text-xl font-bold mb-4">SCRUM Poker Session</h1>
 
     <div v-if="session && currentRound">
@@ -100,9 +100,9 @@
         </button>
       </div>
     </div>
+    </div>
   </div>
 </template>
-
 <script setup lang="ts">
 const route = useRoute()
 const supabase = useSupabaseClient()
@@ -119,8 +119,9 @@ const roundTitle = ref('')
 
 const SESSION_KEY = `scrum_poker_participant_${sessionId}`
 
+const JIRA_BASE_URL = 'https://yourcompany.atlassian.net/browse/' // ← make this dynamic later
+
 onMounted(async () => {
-  // Load session
   const { data: sessionData } = await supabase
     .from('sessions')
     .select()
@@ -128,11 +129,8 @@ onMounted(async () => {
     .single()
 
   session.value = sessionData
-
-  // Load latest round
   await fetchLatestRound()
 
-  // Subscribe to new rounds
   supabase.channel('realtime-rounds')
     .on('postgres_changes', {
       event: 'INSERT',
@@ -142,7 +140,6 @@ onMounted(async () => {
     }, handleRoundCreated)
     .subscribe()
 
-  // Check for existing participant
   const existing = localStorage.getItem(SESSION_KEY)
   if (existing) {
     const parsed = JSON.parse(existing)
@@ -185,13 +182,13 @@ const saveRoundTitle = async () => {
     .update({ title: roundTitle.value })
     .eq('id', currentRound.value.id)
 
-  if (error) {
-    console.error('❌ Failed to save round title', error)
-  } else {
-    console.log('✅ Round title saved')
+  if (!error) {
     await fetchLatestRound()
+  } else {
+    console.error('❌ Failed to save round title', error)
   }
 }
+
 const joinSession = async () => {
   if (!username.value.trim()) return
 
@@ -237,6 +234,6 @@ const jiraLink = computed(() => {
   const match = currentRound.value?.title?.match(/^([A-Z]+-\d+)/)
   if (!match) return null
   const ticket = match[1]
-  return `https://flankerbrands.atlassian.net/browse/${ticket}`
+  return `${JIRA_BASE_URL}${ticket}`
 })
 </script>

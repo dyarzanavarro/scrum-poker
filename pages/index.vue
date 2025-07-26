@@ -37,23 +37,20 @@
         <div>📊 Vote, reveal, and estimate in real-time</div>
       </div>
     </section>
-
   </div>
 </template>
 
 <script setup lang="ts">
 const supabase = useSupabaseClient()
 const router = useRouter()
-
 const loading = ref(false)
 const joinCode = ref('')
-
 
 const createSessionWithRound = async () => {
   loading.value = true
 
   try {
-    // 1. Get Turnstile token from widget
+    // ✅ Step 1: Get CAPTCHA token (only in production)
     if (process.env.NODE_ENV === 'production') {
       const turnstileToken = (window as any).turnstile?.getResponse()
       if (!turnstileToken) {
@@ -63,12 +60,17 @@ const createSessionWithRound = async () => {
       }
     }
 
-    // 2. Get client IP
-    const ipRes = await fetch("https://api.ipify.org?format=json")
-    const ipData = await ipRes.json()
-    const ip = ipData?.ip || null
+    // ✅ Step 2: Get IP via local Nuxt API route (no CORS issues)
+    let ip: string | null = null
+    try {
+      const res = await fetch('/api/ip')
+      const data = await res.json()
+      ip = data?.ip || null
+    } catch (e) {
+      console.warn("IP fetch failed:", e)
+    }
 
-    // 3. Insert session with IP
+    // ✅ Step 3: Create session
     const { data: session, error: sessionError } = await supabase
       .from("sessions")
       .insert([{ name: null, ip_address: ip }])
@@ -82,15 +84,13 @@ const createSessionWithRound = async () => {
       return
     }
 
-    // 4. Insert first round
-    const { error: roundError } = await supabase.from("rounds").insert([
-      { session_id: session.id, title: "Round 1" }
-    ])
-    if (roundError) {
-      console.error("⚠️ Failed to create round", roundError)
-    }
+    // ✅ Step 4: Create first round
+    const { error: roundError } = await supabase
+      .from("rounds")
+      .insert([{ session_id: session.id, title: "Round 1" }])
+    if (roundError) console.error("⚠️ Failed to create round", roundError)
 
-    // 5. Insert host participant
+    // ✅ Step 5: Create host participant
     const { data: participant, error: participantError } = await supabase
       .from("participants")
       .insert([{ session_id: session.id, username: "Host", is_host: true }])
@@ -106,6 +106,7 @@ const createSessionWithRound = async () => {
       )
     }
 
+    // ✅ Step 6: Redirect to session
     router.push(`/session/${session.id}`)
   } catch (err) {
     console.error("Unexpected error", err)
@@ -118,9 +119,5 @@ const createSessionWithRound = async () => {
 const joinByCode = () => {
   if (!joinCode.value.trim()) return
   router.push(`/session/${joinCode.value.trim()}`)
-}
-
-const joinDemo = () => {
-  router.push(`/session/demo`)
 }
 </script>
